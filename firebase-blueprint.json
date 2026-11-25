@@ -1,0 +1,1200 @@
+{
+  "entities": {
+    "PublicProfile": {
+      "title": "PublicProfile",
+      "description": "Publicly visible (to signed-in BMASA members) maritime credential and directory record. Excludes sensitive PII (Passport, Bank/MFS, NOK, Email, Phone).",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID matching the document ID."
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "photoUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 100000
+        },
+        "cadetNumber": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 24,
+          "pattern": "^[A-Za-z0-9\\-\\/ ]+$"
+        },
+        "batch": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32
+        },
+        "department": {
+          "type": "string",
+          "enum": ["Nautical", "Marine Engineering", "Instructors"]
+        },
+        "cdcNumber": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9\\-\\/ ]*$"
+        },
+        "sidNumber": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9\\-\\/ ]*$"
+        },
+        "currentRank": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "availabilityStatus": {
+          "type": "string",
+          "enum": ["Available for Sea", "Onboard", "On Leave", "Shore-Based"]
+        },
+        "bloodGroup": {
+          "type": "string",
+          "enum": ["", "A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
+        },
+        "city": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 80
+        },
+        "country": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 80
+        },
+        "cvUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "memberSerial": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40,
+          "pattern": "^[A-Za-z0-9\\-\\/ ]+$"
+        },
+        "isVerified": {
+          "type": "boolean"
+        },
+        "isPublicDirectory": {
+          "type": "boolean"
+        },
+        "voyageCount": {
+          "type": "integer"
+        },
+        "contactEmail": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 160
+        },
+        "contactPhone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "additionalInfo": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "fullName",
+        "photoUrl",
+        "cadetNumber",
+        "batch",
+        "department",
+        "cdcNumber",
+        "currentRank",
+        "availabilityStatus",
+        "bloodGroup",
+        "city",
+        "country",
+        "cvUrl",
+        "memberSerial",
+        "isVerified",
+        "isPublicDirectory",
+        "voyageCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PrivateVault": {
+      "title": "PrivateVault",
+      "description": "Strictly confidential PII vault isolated to document owner and verified BMASA admins. Contains contact details, Passport No., welfare bank/MFS info, certificate expiry dates, and Emergency NOK.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "whatsapp": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "passportNumber": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9\\-\\/ ]*$"
+        },
+        "academyName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 140
+        },
+        "passportIssueDate": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+        },
+        "bankAccountHolder": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "bankName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "bankBranch": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "bankAccountNumber": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "bankRoutingNumber": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "mfsNumber": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "passportExpiry": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+        },
+        "cdcIssueDate": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+        },
+        "cdcExpiry": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+        },
+        "medicalExpiry": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+        },
+        "stcwCocExpiry": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+        },
+        "academicQualifications": {
+          "type": "array",
+          "description": "Bounded list (max 12) of academic qualifications (SSC, HSC, Academy, B.Sc., etc.)."
+        },
+        "nokName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 100
+        },
+        "nokRelation": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 40
+        },
+        "nokPhone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "nokCity": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 80
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "email",
+        "phone",
+        "whatsapp",
+        "passportNumber",
+        "bankAccountHolder",
+        "bankName",
+        "bankBranch",
+        "bankAccountNumber",
+        "bankRoutingNumber",
+        "mfsNumber",
+        "passportExpiry",
+        "cdcExpiry",
+        "medicalExpiry",
+        "stcwCocExpiry",
+        "nokName",
+        "nokRelation",
+        "nokPhone",
+        "nokCity",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DirectoryProfile": {
+      "title": "DirectoryProfile",
+      "description": "Legacy non-PII profile collection retained for backward compatibility.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "photoUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 100000
+        },
+        "cadetNumber": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 24,
+          "pattern": "^[A-Za-z0-9\\-\\/ ]+$"
+        },
+        "batch": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32
+        },
+        "department": {
+          "type": "string",
+          "enum": ["Nautical", "Marine Engineering", "Instructors"]
+        },
+        "cdcNumber": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9\\-\\/ ]*$"
+        },
+        "sidNumber": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9\\-\\/ ]*$"
+        },
+        "currentRank": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "availabilityStatus": {
+          "type": "string",
+          "enum": ["Available for Sea", "Onboard", "On Leave", "Shore-Based"]
+        },
+        "cvUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "memberSerial": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40,
+          "pattern": "^[A-Za-z0-9\\-\\/ ]+$"
+        },
+        "isVerified": {
+          "type": "boolean"
+        },
+        "isPublicDirectory": {
+          "type": "boolean"
+        },
+        "voyageCount": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "fullName",
+        "photoUrl",
+        "cadetNumber",
+        "batch",
+        "department",
+        "cdcNumber",
+        "currentRank",
+        "availabilityStatus",
+        "cvUrl",
+        "memberSerial",
+        "isVerified",
+        "isPublicDirectory",
+        "voyageCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MemberPrivateContact": {
+      "title": "MemberPrivateContact",
+      "description": "Legacy owner- and admin-only private contact collection retained for backward compatibility.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "whatsapp": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "phone", "whatsapp", "createdAt", "updatedAt"]
+    },
+    "VoyageRecord": {
+      "title": "VoyageRecord",
+      "description": "A single sea service voyage entry owned by a BMASA member.",
+      "type": "object",
+      "properties": {
+        "memberId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "vesselName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "vesselType": {
+          "type": "string",
+          "enum": [
+            "Bulk Carrier",
+            "Oil Tanker",
+            "Chemical Tanker",
+            "Container",
+            "LNG / LPG",
+            "General Cargo",
+            "Ro-Ro / PCC",
+            "Offshore / PSV"
+          ]
+        },
+        "companyName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "rankServed": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "signOnDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "signOffDate": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+        },
+        "isVisible": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "memberId",
+        "vesselName",
+        "vesselType",
+        "companyName",
+        "rankServed",
+        "signOnDate",
+        "signOffDate",
+        "isVisible",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "JobPosting": {
+      "title": "JobPosting",
+      "description": "Official cadetship vacancy, officer opening, or maritime recruitment notice managed exclusively by BMASA admins.",
+      "type": "object",
+      "properties": {
+        "posterUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "posterName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "posterRank": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "posterBatch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "companyName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "rankNeeded": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "vesselType": {
+          "type": "string",
+          "enum": [
+            "Bulk Carrier",
+            "Oil Tanker",
+            "Chemical Tanker",
+            "Container",
+            "LNG / LPG",
+            "General Cargo",
+            "Ro-Ro / PCC",
+            "Offshore / PSV",
+            "Any Vessel Type"
+          ]
+        },
+        "contactInfo": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "closed"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "posterUid",
+        "posterName",
+        "posterRank",
+        "posterBatch",
+        "companyName",
+        "rankNeeded",
+        "vesselType",
+        "contactInfo",
+        "notes",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PortalStats": {
+      "title": "PortalStats",
+      "description": "Public aggregate portal counters displayed on the landing page.",
+      "type": "object",
+      "properties": {
+        "registeredAlumni": { "type": "integer" },
+        "verifiedCadets": { "type": "integer" },
+        "activePlacements": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["registeredAlumni", "verifiedCadets", "activePlacements", "updatedAt"]
+    },
+    "AdminEntry": {
+      "title": "AdminEntry",
+      "description": "Delegated administrator email record managed exclusively by the Main Admin (razibuddin247@gmail.com).",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 100
+        },
+        "addedByEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"]
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "displayName", "addedByEmail", "role", "createdAt", "updatedAt"]
+    },
+    "BankAccount": {
+      "title": "BankAccount",
+      "description": "Official BMASA bank or mobile financial account managed exclusively by admins.",
+      "type": "object",
+      "properties": {
+        "bankName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "accountName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "accountNumber": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9\\-\\/ +]+$"
+        },
+        "branchName": { "type": "string", "minLength": 0, "maxLength": 120 },
+        "routingNumber": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "accountType": {
+          "type": "string",
+          "enum": ["Bank Account", "Mobile Banking", "Fixed Deposit"]
+        },
+        "currency": { "type": "string", "enum": ["BDT", "USD"] },
+        "notes": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "isActive": { "type": "boolean" },
+        "addedByUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "addedByName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "bankName",
+        "accountName",
+        "accountNumber",
+        "branchName",
+        "routingNumber",
+        "accountType",
+        "currency",
+        "notes",
+        "isActive",
+        "addedByUid",
+        "addedByName",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FundTransaction": {
+      "title": "FundTransaction",
+      "description": "Verified member fund contribution or receipted expense disbursement managed exclusively by admins.",
+      "type": "object",
+      "properties": {
+        "memberUid": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]*$"
+        },
+        "memberName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "memberCadetNumber": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 24,
+          "pattern": "^[A-Za-z0-9\\-\\/ ]*$"
+        },
+        "memberBatch": { "type": "string", "minLength": 0, "maxLength": 32 },
+        "entryType": { "type": "string", "enum": ["contribution", "disbursement"] },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["BDT"] },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Monthly Subscription",
+            "Annual Membership Fee",
+            "Welfare Fund",
+            "Cadet Support",
+            "Dhaka Office Fund",
+            "Event / Reunion",
+            "Operational Expense",
+            "Other"
+          ]
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["Bank Transfer", "bKash", "Nagad", "Rocket", "Cash", "Cheque"]
+        },
+        "bankAccountLabel": { "type": "string", "minLength": 0, "maxLength": 120 },
+        "referenceNumber": { "type": "string", "minLength": 0, "maxLength": 80 },
+        "transactionDateTime": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 25,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]{1,3})?Z?)?$"
+        },
+        "notes": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "receiptDataUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 150000,
+          "description": "Compressed receipt image data URI or URL. Mandatory for expense disbursements."
+        },
+        "isPublished": { "type": "boolean" },
+        "recordedByUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "recordedByName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "recordedByEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "updatedByUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "updatedByName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "updatedByEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "memberUid",
+        "memberName",
+        "memberCadetNumber",
+        "memberBatch",
+        "entryType",
+        "amount",
+        "currency",
+        "category",
+        "paymentMethod",
+        "bankAccountLabel",
+        "referenceNumber",
+        "transactionDateTime",
+        "notes",
+        "receiptDataUrl",
+        "isPublished",
+        "recordedByUid",
+        "recordedByName",
+        "recordedByEmail",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "NoticeItem": {
+      "title": "NoticeItem",
+      "description": "Official BMASA announcement or circular published exclusively by admins.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 3, "maxLength": 140 },
+        "noticeType": {
+          "type": "string",
+          "enum": ["Nautical", "Engineering", "General"]
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Reunion", "AGM Notice", "Cadet Induction", "Dhaka Office", "General Circular"]
+        },
+        "body": { "type": "string", "minLength": 10, "maxLength": 4000 },
+        "attachmentUrl": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "isPinned": { "type": "boolean" },
+        "isPublished": { "type": "boolean" },
+        "authorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "category",
+        "body",
+        "attachmentUrl",
+        "isPinned",
+        "isPublished",
+        "authorUid",
+        "authorName",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MentorshipPost": {
+      "title": "MentorshipPost",
+      "description": "CoC Exam guidance & cadet mentorship posts published by verified alumni or admins.",
+      "type": "object",
+      "properties": {
+        "authorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "authorRank": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "authorBatch": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "authorVerified": { "type": "boolean" },
+        "examTrack": {
+          "type": "string",
+          "enum": [
+            "Class 3 / CoC",
+            "Class 2",
+            "Class 1 / Master",
+            "Class 1 / Chief Eng",
+            "Cadet Prep",
+            "Sea Interview"
+          ]
+        },
+        "title": { "type": "string", "minLength": 4, "maxLength": 140 },
+        "adviceBody": { "type": "string", "minLength": 10, "maxLength": 4000 },
+        "resourceUrl": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "authorUid",
+        "authorName",
+        "authorRank",
+        "authorBatch",
+        "authorVerified",
+        "examTrack",
+        "title",
+        "adviceBody",
+        "resourceUrl",
+        "isPublished",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CrewingCompany": {
+      "title": "CrewingCompany",
+      "description": "Verified shipping company and manning agent directory entry contributed by verified alumni or admins.",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "dosLicense": { "type": "string", "minLength": 0, "maxLength": 40 },
+        "fleetType": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "cadetIntakeStatus": {
+          "type": "string",
+          "enum": ["Accepting Cadets", "Officers Only", "Seasonal Intake", "Paused"]
+        },
+        "contactEmail": { "type": "string", "minLength": 0, "maxLength": 160 },
+        "alumniNotes": { "type": "string", "minLength": 0, "maxLength": 1000 },
+        "authorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "authorVerified": { "type": "boolean" },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "companyName",
+        "dosLicense",
+        "fleetType",
+        "cadetIntakeStatus",
+        "contactEmail",
+        "alumniNotes",
+        "authorUid",
+        "authorName",
+        "authorVerified",
+        "isPublished",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DhakaRoadmapItem": {
+      "title": "DhakaRoadmapItem",
+      "description": "BMASA Executive Committee roster and permanent Dhaka Office milestone roadmap managed exclusively by admins.",
+      "type": "object",
+      "properties": {
+        "itemType": { "type": "string", "enum": ["committee", "milestone"] },
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "subtitle": { "type": "string", "minLength": 0, "maxLength": 140 },
+        "personName": { "type": "string", "minLength": 0, "maxLength": 100 },
+        "personBatch": { "type": "string", "minLength": 0, "maxLength": 32 },
+        "personCadetNo": { "type": "string", "minLength": 0, "maxLength": 24 },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "Planned", "In Progress", "Completed"]
+        },
+        "targetAmountBdt": { "type": "number" },
+        "raisedAmountBdt": { "type": "number" },
+        "displayOrder": { "type": "integer" },
+        "notes": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "isPublished": { "type": "boolean" },
+        "updatedByUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "itemType",
+        "title",
+        "subtitle",
+        "personName",
+        "personBatch",
+        "personCadetNo",
+        "status",
+        "targetAmountBdt",
+        "raisedAmountBdt",
+        "displayOrder",
+        "notes",
+        "isPublished",
+        "updatedByUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CopCertificate": {
+      "title": "CopCertificate",
+      "description": "Confidential STCW Certificate of Proficiency (COP) expiry record stored inside the member's private vault.",
+      "type": "object",
+      "properties": {
+        "memberId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "certNumber": { "type": "string", "minLength": 0, "maxLength": 48 },
+        "issueDate": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+        },
+        "expiryDate": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 10,
+          "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+        },
+        "isStandard": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "memberId",
+        "title",
+        "certNumber",
+        "expiryDate",
+        "isStandard",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PaymentSubmission": {
+      "title": "PaymentSubmission",
+      "description": "Member-submitted subscription or donation payment proof with transaction ID and receipt image awaiting admin treasury verification.",
+      "type": "object",
+      "properties": {
+        "memberUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "memberName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "memberCadetNumber": { "type": "string", "minLength": 1, "maxLength": 24 },
+        "memberBatch": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["BDT"] },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Monthly Subscription",
+            "Annual Membership Fee",
+            "Welfare Fund",
+            "Cadet Support",
+            "Dhaka Office Fund",
+            "Event / Reunion",
+            "Other"
+          ]
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["Bank Transfer", "bKash", "Nagad", "Rocket", "Cash", "Cheque"]
+        },
+        "bankAccountLabel": { "type": "string", "minLength": 0, "maxLength": 120 },
+        "referenceNumber": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "transactionDateTime": { "type": "string", "minLength": 10, "maxLength": 32 },
+        "notes": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "receiptDataUrl": { "type": "string", "minLength": 10, "maxLength": 150000 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "adminNotes": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "reviewedByUid": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "reviewedByName": { "type": "string", "minLength": 0, "maxLength": 100 },
+        "postedTransactionId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "memberUid",
+        "memberName",
+        "memberCadetNumber",
+        "memberBatch",
+        "amount",
+        "currency",
+        "category",
+        "paymentMethod",
+        "bankAccountLabel",
+        "referenceNumber",
+        "transactionDateTime",
+        "notes",
+        "receiptDataUrl",
+        "status",
+        "adminNotes",
+        "reviewedByUid",
+        "reviewedByName",
+        "postedTransactionId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "GalleryPhoto": {
+      "title": "GalleryPhoto",
+      "description": "Batch historical photograph and academy reunion showcase entry published by BMASA admins.",
+      "type": "object",
+      "properties": {
+        "batch": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "description": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "photoUrl": { "type": "string", "minLength": 5, "maxLength": 150000 },
+        "isPublished": { "type": "boolean" },
+        "uploadedByUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "uploadedByName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "uploadedAt": { "type": "string", "minLength": 10, "maxLength": 40 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "batch",
+        "title",
+        "description",
+        "photoUrl",
+        "isPublished",
+        "uploadedByUid",
+        "uploadedByName",
+        "uploadedAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/public_profiles/{memberId}": {
+      "schema": { "$ref": "#/entities/PublicProfile" },
+      "description": "Signed-in readable public directory profiles (non-PII maritime credentials, Blood Group, City/Country, and optional opt-in contact Email/Phone); editable only by owner (excluding isVerified) or verified admin."
+    },
+    "/public_profiles/{memberId}/voyages/{voyageId}": {
+      "schema": { "$ref": "#/entities/VoyageRecord" },
+      "description": "Sea service voyage records linked to a parent PublicProfile."
+    },
+    "/private_vault/{memberId}": {
+      "schema": { "$ref": "#/entities/PrivateVault" },
+      "description": "Strictly owner- and admin-only confidential PII vault (Email, Phone, WhatsApp, Passport No., Bank/MFS payout info, Certificate Expiry dates, Emergency NOK)."
+    },
+    "/private_vault/{memberId}/cop_certificates/{certId}": {
+      "schema": { "$ref": "#/entities/CopCertificate" },
+      "description": "Strictly owner- and admin-only STCW Certificate of Proficiency (COP) expiry records nested under private_vault."
+    },
+    "/directory_profiles/{memberId}": {
+      "schema": { "$ref": "#/entities/DirectoryProfile" },
+      "description": "Legacy signed-in readable directory profiles retained for backward compatibility."
+    },
+    "/directory_profiles/{memberId}/voyages/{voyageId}": {
+      "schema": { "$ref": "#/entities/VoyageRecord" },
+      "description": "Legacy voyage records subcollection retained for backward compatibility."
+    },
+    "/member_private/{memberId}": {
+      "schema": { "$ref": "#/entities/MemberPrivateContact" },
+      "description": "Legacy private contact details retained for backward compatibility."
+    },
+    "/job_postings/{jobId}": {
+      "schema": { "$ref": "#/entities/JobPosting" },
+      "description": "Official cadetship/officer job postings readable by signed-in members; written exclusively by admins."
+    },
+    "/portal_stats/{statId}": {
+      "schema": { "$ref": "#/entities/PortalStats" },
+      "description": "Public aggregate statistics document (/portal_stats/summary) for the landing page."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminEntry" },
+      "description": "Delegated admin registry keyed by sanitized lowercased email; listed and modified exclusively by Main Admin razibuddin247@gmail.com."
+    },
+    "/bank_accounts/{accountId}": {
+      "schema": { "$ref": "#/entities/BankAccount" },
+      "description": "Official BMASA bank & mobile financial accounts readable by signed-in members; managed exclusively by admins."
+    },
+    "/fund_transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/FundTransaction" },
+      "description": "Transparent per-member fund contribution and receipted expense ledger; readable by signed-in members and written exclusively by admins."
+    },
+    "/payment_submissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/PaymentSubmission" },
+      "description": "Member-submitted subscription & donation payment proofs awaiting treasury verification before posting to /fund_transactions."
+    },
+    "/notices/{noticeId}": {
+      "schema": { "$ref": "#/entities/NoticeItem" },
+      "description": "Official BMASA circulars & announcements readable by signed-in members; managed exclusively by admins."
+    },
+    "/mentorship_posts/{postId}": {
+      "schema": { "$ref": "#/entities/MentorshipPost" },
+      "description": "CoC Exam & Cadet Mentorship posts readable by signed-in members; created by verified alumni/admins and editable by author or admin."
+    },
+    "/crewing_companies/{companyId}": {
+      "schema": { "$ref": "#/entities/CrewingCompany" },
+      "description": "Shipping Company & Manning Agent entries readable by signed-in members; created by verified alumni/admins and editable by author or admin."
+    },
+    "/dhaka_office_milestones/{itemId}": {
+      "schema": { "$ref": "#/entities/DhakaRoadmapItem" },
+      "description": "Executive Committee roster & Dhaka Office fundraising milestones readable by signed-in members; managed exclusively by admins."
+    },
+    "/gallery_photos/{photoId}": {
+      "schema": { "$ref": "#/entities/GalleryPhoto" },
+      "description": "BMASA batch photo gallery archive readable by signed-in members; managed exclusively by admins."
+    }
+  }
+}

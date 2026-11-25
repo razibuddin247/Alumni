@@ -1,0 +1,27 @@
+# Bangladesh Marine Academy Sylhet Alumni Association (BMASA) — Firestore Security Specification
+
+## 1. Data Invariants
+1. **Default Deny**: Every unmatched path in `/databases/{database}/documents` is explicitly denied (`allow read, write: if false`).
+2. **Strict PII & Confidential Vault Isolation**: Personal Phone/WhatsApp/Email defaults, **Passport Number**, **Bank Account / MFS payout info**, **Certificate Expiry Dates (Core + STCW COP subcollection `/private_vault/{memberId}/cop_certificates/{certId}`)**, and **Emergency Next-of-Kin (NOK)** reside exclusively in `/private_vault/{memberId}` (plus legacy `/member_private/{memberId}`). Readable (`get`) ONLY by `isOwner(memberId)` or `isAdmin()`, and `allow list` on `/private_vault` is denied (`false`), while `/cop_certificates` can only be listed by `isOwner(memberId)`.
+3. **Public Directory Separation (`/public_profiles/{memberId}`)**: Non-sensitive maritime credentials (`fullName`, `photoUrl`, `cadetNumber`, `batch`, `department`, `cdcNumber`, `currentRank`, `availabilityStatus`, `bloodGroup`, `city`, `country`, `cvUrl`, `memberSerial`, `isVerified`, `voyageCount`) plus optional opt-in directory contact strings (`contactEmail`, `contactPhone`) live in `/public_profiles/{memberId}` (and legacy `/directory_profiles/{memberId}`).
+4. **Two-Tier Admin Authority**:
+   - **Main Admin (`isMainAdmin()`)**: Exclusively `razibuddin247@gmail.com` with `request.auth.token.email_verified == true`. Only the Main Admin can list, add, update, or remove records in `/admins/{adminId}`.
+   - **Admin (`isAdmin()`)**: `isMainAdmin()` OR a verified user whose sanitized lowercased email exists in `/admins/{adminId}`.
+5. **Member Registration Approval**: `isVerified` on `/public_profiles/{memberId}` and `/directory_profiles/{memberId}` MUST initialize to `false` for non-admin creators and can ONLY be toggled by `isAdmin()`.
+6. **Master Gate (Voyages)**: A voyage document under `/public_profiles/{memberId}/voyages/{voyageId}` (or legacy `/directory_profiles/{memberId}/voyages/{voyageId}`) cannot be created, updated, or deleted unless the parent profile exists and `memberId == request.auth.uid` (or `isAdmin()`).
+7. **Admin-Only Job Board, Notices, Dhaka Roadmap & Bank Accounts**: All mutations (`create`, `update`, `delete`) on `/job_postings/{jobId}`, `/notices/{noticeId}`, `/dhaka_office_milestones/{itemId}`, and `/bank_accounts/{accountId}` are restricted exclusively to `isAdmin()`.
+8. **Receipted Expenses, Member Payment Proofs & Treasury Integrity (`/fund_transactions/{transactionId}`, `/payment_submissions/{submissionId}`)**:
+   - All `/fund_transactions` writes are strictly `isAdmin()`. Any `'disbursement'` (expense) MUST include non-trivial `notes` (at least 5 characters) AND a non-empty `receiptDataUrl` (at least 10 characters, <= 150,000 characters). If `memberUid != ''`, the parent profile must exist in `/public_profiles/{memberUid}` or `/directory_profiles/{memberUid}`.
+   - Signed-in members can submit payment proofs to `/payment_submissions/{submissionId}` ONLY with `memberUid == request.auth.uid`, `status == 'pending'`, mandatory `referenceNumber` (>= 2 chars), and mandatory `receiptDataUrl` (>= 10 chars). Only `isAdmin()` can approve/reject (`status`, `adminNotes`, `reviewedByUid`, `reviewedByName`, `postedTransactionId`) or delete submissions.
+9. **Verified Alumni Community Posts (`/mentorship_posts/{postId}`, `/crewing_companies/{companyId}`)**: Only verified BMASA members (`isVerified == true` in `/public_profiles/{uid}` or `/directory_profiles/{uid}`) or admins can create entries (`authorUid == request.auth.uid`); updates/deletes are restricted strictly to `isOwner(existing().authorUid)` or `isAdmin()`.
+10. **Temporal Integrity & Secure List Queries**: `createdAt == request.time`, immutable `createdAt` and creator/owner UIDs on update, `updatedAt == request.time`, and zero `get()`/`exists()` inside any `allow list` rule.
+
+## 2. Adversarial Payloads (Red Team Verification)
+1. **Self-Verification Privilege Escalation (Create/Update)**: Non-admin creates or updates `/public_profiles/{uid}` with `isVerified: true`. Expected: `PERMISSION_DENIED`.
+2. **Shadow Field Injection**: Owner updates `/public_profiles/{uid}` or `/private_vault/{uid}` with ghost field `adminRole: "super"`. Expected: `PERMISSION_DENIED`.
+3. **Private Vault Blanket Leak**: Authenticated User A attempts `get` or `list` on `/private_vault/{userB}` (to steal Passport No., Bank details, or NOK). Expected: `PERMISSION_DENIED`.
+4. **Passport / Bank Leak in Public Profile**: User attempts to write `passportNumber` or `bankAccountNumber` into `/public_profiles/{uid}`. Expected: `PERMISSION_DENIED` (`hasOnly` check).
+5. **Unreceipted Expense Disbursement**: Admin attempts to create `/fund_transactions/{txId}` with `entryType: 'disbursement'` and empty `receiptDataUrl` or short `notes`. Expected: `PERMISSION_DENIED`.
+6. **Email Spoofing Attack**: Unverified account (`email_verified: false`) with email `razibuddin247@gmail.com` attempts admin write. Expected: `PERMISSION_DENIED`.
+7. **Unauthorized Community / Notice / Roadmap Escalation**: Non-admin member attempts to write to `/notices/{id}`, `/dhaka_office_milestones/{id}`, or `/job_postings/{id}`; or unverified member attempts to create `/mentorship_posts/{id}` or `/crewing_companies/{id}`. Expected: `PERMISSION_DENIED`.
+8. **Client Timestamp Forgery & ID Poisoning**: User submits backdated `createdAt`/`updatedAt` or malformed document ID (`../admin`). Expected: `PERMISSION_DENIED`.

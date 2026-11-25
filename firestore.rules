@@ -1,0 +1,1823 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 0: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Phase 3: Reusable Hardened Global Primitives
+    // -------------------------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function emailToAdminDocId(email) {
+      return email.lower().replace('[^a-z0-9]', '_');
+    }
+
+    function isMainAdmin() {
+      return isVerifiedUser() &&
+        request.auth.token.email is string &&
+        request.auth.token.email.lower() == 'razibuddin247@gmail.com';
+    }
+
+    function isAdmin() {
+      return isMainAdmin() || (
+        isVerifiedUser() && (
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+          (
+            request.auth.token.email is string &&
+            exists(/databases/$(database)/documents/admins/$(emailToAdminDocId(request.auth.token.email)))
+          )
+        )
+      );
+    }
+
+    function isVerifiedMember() {
+      return isAdmin() || (
+        isVerifiedUser() && (
+          (
+            exists(/databases/$(database)/documents/public_profiles/$(request.auth.uid)) &&
+            get(/databases/$(database)/documents/public_profiles/$(request.auth.uid)).data.isVerified == true
+          ) ||
+          (
+            exists(/databases/$(database)/documents/directory_profiles/$(request.auth.uid)) &&
+            get(/databases/$(database)/documents/directory_profiles/$(request.auth.uid)).data.isVerified == true
+          )
+        )
+      );
+    }
+
+    function memberProfileExists(uid) {
+      return exists(/databases/$(database)/documents/public_profiles/$(uid)) ||
+        exists(/databases/$(database)/documents/directory_profiles/$(uid));
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidDepartment(val) {
+      return val is string && val in ['Nautical', 'Marine Engineering', 'Instructors'];
+    }
+
+    function isValidAvailability(val) {
+      return val is string && val in ['Available for Sea', 'Onboard', 'On Leave', 'Shore-Based'];
+    }
+
+    function isValidBloodGroup(val) {
+      return val is string && val in ['', 'A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+    }
+
+    function isOptionalIsoDate(val) {
+      return val is string && val.size() <= 10 && val.matches('^([0-9]{4}-[0-9]{2}-[0-9]{2})?$');
+    }
+
+    function isValidVesselType(val) {
+      return val is string && val in [
+        'Bulk Carrier',
+        'Oil Tanker',
+        'Chemical Tanker',
+        'Container',
+        'LNG / LPG',
+        'General Cargo',
+        'Ro-Ro / PCC',
+        'Offshore / PSV'
+      ];
+    }
+
+    function isValidJobVesselType(val) {
+      return isValidVesselType(val) || (val is string && val == 'Any Vessel Type');
+    }
+
+    function isValidFundCategory(val) {
+      return val is string && val in [
+        'Monthly Subscription',
+        'Annual Membership Fee',
+        'Welfare Fund',
+        'Cadet Support',
+        'Dhaka Office Fund',
+        'Event / Reunion',
+        'Operational Expense',
+        'Other'
+      ];
+    }
+
+    function isValidPaymentMethod(val) {
+      return val is string && val in [
+        'Bank Transfer',
+        'bKash',
+        'Nagad',
+        'Rocket',
+        'Cash',
+        'Cheque'
+      ];
+    }
+
+    // -------------------------------------------------------------------------
+    // Pillar 2: Entity Validation Blueprints (Synchronized with firebase-blueprint.json)
+    // -------------------------------------------------------------------------
+    function isValidPublicProfile(data) {
+      return data.keys().hasAll([
+          'uid',
+          'fullName',
+          'photoUrl',
+          'cadetNumber',
+          'batch',
+          'department',
+          'cdcNumber',
+          'currentRank',
+          'availabilityStatus',
+          'bloodGroup',
+          'city',
+          'country',
+          'cvUrl',
+          'memberSerial',
+          'isVerified',
+          'isPublicDirectory',
+          'voyageCount',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid',
+          'fullName',
+          'photoUrl',
+          'cadetNumber',
+          'batch',
+          'department',
+          'cdcNumber',
+          'sidNumber',
+          'currentRank',
+          'availabilityStatus',
+          'bloodGroup',
+          'city',
+          'country',
+          'cvUrl',
+          'memberSerial',
+          'isVerified',
+          'isPublicDirectory',
+          'voyageCount',
+          'contactEmail',
+          'contactPhone',
+          'additionalInfo',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+        data.photoUrl is string && data.photoUrl.size() <= 100000 &&
+        data.cadetNumber is string && data.cadetNumber.size() >= 2 && data.cadetNumber.size() <= 24 &&
+        data.cadetNumber.matches('^[A-Za-z0-9\\-\\/ ]+$') &&
+        data.batch is string && data.batch.size() >= 2 && data.batch.size() <= 32 &&
+        isValidDepartment(data.department) &&
+        data.cdcNumber is string && data.cdcNumber.size() <= 32 &&
+        data.cdcNumber.matches('^[A-Za-z0-9\\-\\/ ]*$') &&
+        (!('sidNumber' in data) || (data.sidNumber is string && data.sidNumber.size() <= 32 && data.sidNumber.matches('^[A-Za-z0-9\\-\\/ ]*$'))) &&
+        data.currentRank is string && data.currentRank.size() >= 2 && data.currentRank.size() <= 64 &&
+        isValidAvailability(data.availabilityStatus) &&
+        isValidBloodGroup(data.bloodGroup) &&
+        data.city is string && data.city.size() <= 80 &&
+        data.country is string && data.country.size() <= 80 &&
+        data.cvUrl is string && data.cvUrl.size() <= 500 &&
+        data.memberSerial is string && data.memberSerial.size() >= 2 && data.memberSerial.size() <= 40 &&
+        data.memberSerial.matches('^[A-Za-z0-9\\-\\/ ]+$') &&
+        data.isVerified is bool &&
+        data.isPublicDirectory is bool &&
+        data.voyageCount is int && data.voyageCount >= 0 && data.voyageCount <= 200 &&
+        (!('contactEmail' in data) || (data.contactEmail is string && data.contactEmail.size() <= 160)) &&
+        (!('contactPhone' in data) || (data.contactPhone is string && data.contactPhone.size() <= 32)) &&
+        (!('additionalInfo' in data) || (data.additionalInfo is string && data.additionalInfo.size() <= 1000)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAcademicQualificationItem(item) {
+      return item is map &&
+        item.keys().hasAll(['id', 'level', 'institution', 'boardOrUniversity', 'passingYear', 'result']) &&
+        item.keys().hasOnly(['id', 'level', 'institution', 'boardOrUniversity', 'passingYear', 'result']) &&
+        item.id is string && item.id.size() >= 1 && item.id.size() <= 64 &&
+        item.level is string && item.level.size() >= 1 && item.level.size() <= 80 &&
+        item.institution is string && item.institution.size() <= 140 &&
+        item.boardOrUniversity is string && item.boardOrUniversity.size() <= 120 &&
+        item.passingYear is string && item.passingYear.size() <= 12 &&
+        item.result is string && item.result.size() <= 64;
+    }
+
+    function isValidAcademicQualificationList(items) {
+      return items is list &&
+        items.size() <= 12 &&
+        (items.size() == 0 || isValidAcademicQualificationItem(items[0]));
+    }
+
+    function isValidPrivateVault(data) {
+      return data.keys().hasAll([
+          'uid',
+          'email',
+          'phone',
+          'whatsapp',
+          'passportNumber',
+          'bankAccountHolder',
+          'bankName',
+          'bankBranch',
+          'bankAccountNumber',
+          'bankRoutingNumber',
+          'mfsNumber',
+          'passportExpiry',
+          'cdcExpiry',
+          'medicalExpiry',
+          'stcwCocExpiry',
+          'nokName',
+          'nokRelation',
+          'nokPhone',
+          'nokCity',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid',
+          'email',
+          'phone',
+          'whatsapp',
+          'academyName',
+          'passportNumber',
+          'passportIssueDate',
+          'bankAccountHolder',
+          'bankName',
+          'bankBranch',
+          'bankAccountNumber',
+          'bankRoutingNumber',
+          'mfsNumber',
+          'passportExpiry',
+          'cdcIssueDate',
+          'cdcExpiry',
+          'medicalExpiry',
+          'stcwCocExpiry',
+          'academicQualifications',
+          'nokName',
+          'nokRelation',
+          'nokPhone',
+          'nokCity',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.phone is string && data.phone.size() <= 32 &&
+        data.whatsapp is string && data.whatsapp.size() <= 32 &&
+        (!('academyName' in data) || (data.academyName is string && data.academyName.size() <= 140)) &&
+        data.passportNumber is string && data.passportNumber.size() <= 32 &&
+        data.passportNumber.matches('^[A-Za-z0-9\\-\\/ ]*$') &&
+        (!('passportIssueDate' in data) || isOptionalIsoDate(data.passportIssueDate)) &&
+        data.bankAccountHolder is string && data.bankAccountHolder.size() <= 120 &&
+        data.bankName is string && data.bankName.size() <= 120 &&
+        data.bankBranch is string && data.bankBranch.size() <= 120 &&
+        data.bankAccountNumber is string && data.bankAccountNumber.size() <= 64 &&
+        data.bankRoutingNumber is string && data.bankRoutingNumber.size() <= 64 &&
+        data.mfsNumber is string && data.mfsNumber.size() <= 32 &&
+        isOptionalIsoDate(data.passportExpiry) &&
+        (!('cdcIssueDate' in data) || isOptionalIsoDate(data.cdcIssueDate)) &&
+        isOptionalIsoDate(data.cdcExpiry) &&
+        isOptionalIsoDate(data.medicalExpiry) &&
+        isOptionalIsoDate(data.stcwCocExpiry) &&
+        (!('academicQualifications' in data) || isValidAcademicQualificationList(data.academicQualifications)) &&
+        data.nokName is string && data.nokName.size() <= 100 &&
+        data.nokRelation is string && data.nokRelation.size() <= 40 &&
+        data.nokPhone is string && data.nokPhone.size() <= 32 &&
+        data.nokCity is string && data.nokCity.size() <= 80 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidDirectoryProfile(data) {
+      return data.keys().hasAll([
+          'uid',
+          'fullName',
+          'photoUrl',
+          'cadetNumber',
+          'batch',
+          'department',
+          'cdcNumber',
+          'currentRank',
+          'availabilityStatus',
+          'cvUrl',
+          'memberSerial',
+          'isVerified',
+          'isPublicDirectory',
+          'voyageCount',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid',
+          'fullName',
+          'photoUrl',
+          'cadetNumber',
+          'batch',
+          'department',
+          'cdcNumber',
+          'sidNumber',
+          'currentRank',
+          'availabilityStatus',
+          'cvUrl',
+          'memberSerial',
+          'isVerified',
+          'isPublicDirectory',
+          'voyageCount',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+        data.photoUrl is string && data.photoUrl.size() <= 100000 &&
+        data.cadetNumber is string && data.cadetNumber.size() >= 2 && data.cadetNumber.size() <= 24 &&
+        data.cadetNumber.matches('^[A-Za-z0-9\\-\\/ ]+$') &&
+        data.batch is string && data.batch.size() >= 2 && data.batch.size() <= 32 &&
+        isValidDepartment(data.department) &&
+        data.cdcNumber is string && data.cdcNumber.size() <= 32 &&
+        data.cdcNumber.matches('^[A-Za-z0-9\\-\\/ ]*$') &&
+        (!('sidNumber' in data) || (data.sidNumber is string && data.sidNumber.size() <= 32 && data.sidNumber.matches('^[A-Za-z0-9\\-\\/ ]*$'))) &&
+        data.currentRank is string && data.currentRank.size() >= 2 && data.currentRank.size() <= 64 &&
+        isValidAvailability(data.availabilityStatus) &&
+        data.cvUrl is string && data.cvUrl.size() <= 500 &&
+        data.memberSerial is string && data.memberSerial.size() >= 2 && data.memberSerial.size() <= 40 &&
+        data.memberSerial.matches('^[A-Za-z0-9\\-\\/ ]+$') &&
+        data.isVerified is bool &&
+        data.isPublicDirectory is bool &&
+        data.voyageCount is int && data.voyageCount >= 0 && data.voyageCount <= 200 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPrivateContact(data) {
+      return data.keys().hasAll(['uid', 'email', 'phone', 'whatsapp', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'phone', 'whatsapp', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.phone is string && data.phone.size() <= 32 &&
+        data.whatsapp is string && data.whatsapp.size() <= 32 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidVoyageRecord(data, memberId) {
+      return data.keys().hasAll([
+          'memberId',
+          'vesselName',
+          'vesselType',
+          'companyName',
+          'rankServed',
+          'signOnDate',
+          'signOffDate',
+          'isVisible',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'memberId',
+          'vesselName',
+          'vesselType',
+          'companyName',
+          'rankServed',
+          'signOnDate',
+          'signOffDate',
+          'isVisible',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.memberId) &&
+        data.memberId == memberId &&
+        data.vesselName is string && data.vesselName.size() >= 2 && data.vesselName.size() <= 100 &&
+        isValidVesselType(data.vesselType) &&
+        data.companyName is string && data.companyName.size() >= 2 && data.companyName.size() <= 120 &&
+        data.rankServed is string && data.rankServed.size() >= 2 && data.rankServed.size() <= 64 &&
+        data.signOnDate is string && data.signOnDate.size() == 10 &&
+        data.signOnDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+        isOptionalIsoDate(data.signOffDate) &&
+        data.isVisible is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidJobPosting(data) {
+      return data.keys().hasAll([
+          'posterUid',
+          'posterName',
+          'posterRank',
+          'posterBatch',
+          'companyName',
+          'rankNeeded',
+          'vesselType',
+          'contactInfo',
+          'notes',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'posterUid',
+          'posterName',
+          'posterRank',
+          'posterBatch',
+          'companyName',
+          'rankNeeded',
+          'vesselType',
+          'contactInfo',
+          'notes',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.posterUid) &&
+        data.posterName is string && data.posterName.size() >= 2 && data.posterName.size() <= 100 &&
+        data.posterRank is string && data.posterRank.size() >= 2 && data.posterRank.size() <= 64 &&
+        data.posterBatch is string && data.posterBatch.size() >= 1 && data.posterBatch.size() <= 32 &&
+        data.companyName is string && data.companyName.size() >= 2 && data.companyName.size() <= 120 &&
+        data.rankNeeded is string && data.rankNeeded.size() >= 2 && data.rankNeeded.size() <= 64 &&
+        isValidJobVesselType(data.vesselType) &&
+        data.contactInfo is string && data.contactInfo.size() >= 3 && data.contactInfo.size() <= 160 &&
+        data.notes is string && data.notes.size() <= 1000 &&
+        data.status is string && data.status in ['open', 'closed'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPortalStats(data) {
+      return data.keys().hasAll(['registeredAlumni', 'verifiedCadets', 'activePlacements', 'updatedAt']) &&
+        data.keys().hasOnly(['registeredAlumni', 'verifiedCadets', 'activePlacements', 'updatedAt']) &&
+        data.registeredAlumni is int && data.registeredAlumni >= 0 && data.registeredAlumni <= 1000000 &&
+        data.verifiedCadets is int && data.verifiedCadets >= 0 && data.verifiedCadets <= 1000000 &&
+        data.activePlacements is int && data.activePlacements >= 0 && data.activePlacements <= 1000000 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAdminEntry(data) {
+      return data.keys().hasAll(['email', 'displayName', 'addedByEmail', 'role', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['email', 'displayName', 'addedByEmail', 'role', 'createdAt', 'updatedAt']) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$') &&
+        data.displayName is string && data.displayName.size() <= 100 &&
+        data.addedByEmail is string && data.addedByEmail.size() >= 3 && data.addedByEmail.size() <= 160 &&
+        data.role is string && data.role == 'admin' &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidBankAccount(data) {
+      return data.keys().hasAll([
+          'bankName',
+          'accountName',
+          'accountNumber',
+          'branchName',
+          'routingNumber',
+          'accountType',
+          'currency',
+          'notes',
+          'isActive',
+          'addedByUid',
+          'addedByName',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'bankName',
+          'accountName',
+          'accountNumber',
+          'branchName',
+          'routingNumber',
+          'accountType',
+          'currency',
+          'notes',
+          'isActive',
+          'addedByUid',
+          'addedByName',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.bankName is string && data.bankName.size() >= 2 && data.bankName.size() <= 120 &&
+        data.accountName is string && data.accountName.size() >= 2 && data.accountName.size() <= 120 &&
+        data.accountNumber is string && data.accountNumber.size() >= 2 && data.accountNumber.size() <= 64 &&
+        data.accountNumber.matches('^[A-Za-z0-9\\-\\/ +]+$') &&
+        data.branchName is string && data.branchName.size() <= 120 &&
+        data.routingNumber is string && data.routingNumber.size() <= 64 &&
+        data.accountType is string && data.accountType in ['Bank Account', 'Mobile Banking', 'Fixed Deposit'] &&
+        data.currency is string && data.currency in ['BDT', 'USD'] &&
+        data.notes is string && data.notes.size() <= 500 &&
+        data.isActive is bool &&
+        isValidId(data.addedByUid) &&
+        data.addedByName is string && data.addedByName.size() >= 2 && data.addedByName.size() <= 100 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidFundTransaction(data) {
+      return data.keys().hasAll([
+          'memberUid',
+          'memberName',
+          'memberCadetNumber',
+          'memberBatch',
+          'entryType',
+          'amount',
+          'currency',
+          'category',
+          'paymentMethod',
+          'bankAccountLabel',
+          'referenceNumber',
+          'transactionDateTime',
+          'notes',
+          'receiptDataUrl',
+          'isPublished',
+          'recordedByUid',
+          'recordedByName',
+          'recordedByEmail',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'memberUid',
+          'memberName',
+          'memberCadetNumber',
+          'memberBatch',
+          'entryType',
+          'amount',
+          'currency',
+          'category',
+          'paymentMethod',
+          'bankAccountLabel',
+          'referenceNumber',
+          'transactionDateTime',
+          'notes',
+          'receiptDataUrl',
+          'isPublished',
+          'recordedByUid',
+          'recordedByName',
+          'recordedByEmail',
+          'updatedByUid',
+          'updatedByName',
+          'updatedByEmail',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.memberUid is string && data.memberUid.size() <= 128 &&
+        data.memberUid.matches('^[a-zA-Z0-9_\\-]*$') &&
+        data.memberName is string && data.memberName.size() >= 2 && data.memberName.size() <= 100 &&
+        data.memberCadetNumber is string && data.memberCadetNumber.size() <= 24 &&
+        data.memberCadetNumber.matches('^[A-Za-z0-9\\-\\/ ]*$') &&
+        data.memberBatch is string && data.memberBatch.size() <= 32 &&
+        data.entryType is string && data.entryType in ['contribution', 'disbursement'] &&
+        data.amount is number && data.amount > 0 && data.amount <= 100000000 &&
+        data.currency is string && data.currency == 'BDT' &&
+        isValidFundCategory(data.category) &&
+        isValidPaymentMethod(data.paymentMethod) &&
+        data.bankAccountLabel is string && data.bankAccountLabel.size() <= 120 &&
+        data.referenceNumber is string && data.referenceNumber.size() <= 80 &&
+        data.transactionDateTime is string && data.transactionDateTime.size() >= 16 && data.transactionDateTime.size() <= 25 &&
+        data.transactionDateTime.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]{1,3})?Z?)?$') &&
+        data.notes is string && data.notes.size() <= 500 &&
+        data.receiptDataUrl is string && data.receiptDataUrl.size() <= 150000 &&
+        (
+          data.entryType == 'contribution' ||
+          (data.notes.size() >= 5 && data.receiptDataUrl.size() >= 10)
+        ) &&
+        data.isPublished is bool &&
+        isValidId(data.recordedByUid) &&
+        data.recordedByName is string && data.recordedByName.size() >= 2 && data.recordedByName.size() <= 100 &&
+        data.recordedByEmail is string && data.recordedByEmail.size() >= 3 && data.recordedByEmail.size() <= 160 &&
+        (!('updatedByUid' in data) || isValidId(data.updatedByUid)) &&
+        (!('updatedByName' in data) || (data.updatedByName is string && data.updatedByName.size() >= 2 && data.updatedByName.size() <= 100)) &&
+        (!('updatedByEmail' in data) || (data.updatedByEmail is string && data.updatedByEmail.size() >= 3 && data.updatedByEmail.size() <= 160)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidNoticeItem(data) {
+      return data.keys().hasAll([
+          'title',
+          'category',
+          'body',
+          'attachmentUrl',
+          'isPinned',
+          'isPublished',
+          'authorUid',
+          'authorName',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'title',
+          'noticeType',
+          'category',
+          'body',
+          'attachmentUrl',
+          'isPinned',
+          'isPublished',
+          'authorUid',
+          'authorName',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.title is string && data.title.size() >= 3 && data.title.size() <= 140 &&
+        (!('noticeType' in data) || (data.noticeType is string && data.noticeType in ['Nautical', 'Engineering', 'General'])) &&
+        data.category is string && data.category in ['Reunion', 'AGM Notice', 'Cadet Induction', 'Dhaka Office', 'General Circular'] &&
+        data.body is string && data.body.size() >= 10 && data.body.size() <= 4000 &&
+        data.attachmentUrl is string && data.attachmentUrl.size() <= 500 &&
+        data.isPinned is bool &&
+        data.isPublished is bool &&
+        isValidId(data.authorUid) &&
+        data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 100 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMentorshipPost(data) {
+      return data.keys().hasAll([
+          'authorUid',
+          'authorName',
+          'authorRank',
+          'authorBatch',
+          'authorVerified',
+          'examTrack',
+          'title',
+          'adviceBody',
+          'resourceUrl',
+          'isPublished',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'authorUid',
+          'authorName',
+          'authorRank',
+          'authorBatch',
+          'authorVerified',
+          'examTrack',
+          'title',
+          'adviceBody',
+          'resourceUrl',
+          'isPublished',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.authorUid) &&
+        data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 100 &&
+        data.authorRank is string && data.authorRank.size() >= 2 && data.authorRank.size() <= 64 &&
+        data.authorBatch is string && data.authorBatch.size() >= 1 && data.authorBatch.size() <= 32 &&
+        data.authorVerified is bool &&
+        data.examTrack is string && data.examTrack in ['Class 3 / CoC', 'Class 2', 'Class 1 / Master', 'Class 1 / Chief Eng', 'Cadet Prep', 'Sea Interview'] &&
+        data.title is string && data.title.size() >= 4 && data.title.size() <= 140 &&
+        data.adviceBody is string && data.adviceBody.size() >= 10 && data.adviceBody.size() <= 4000 &&
+        data.resourceUrl is string && data.resourceUrl.size() <= 500 &&
+        data.isPublished is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCrewingCompany(data) {
+      return data.keys().hasAll([
+          'companyName',
+          'dosLicense',
+          'fleetType',
+          'cadetIntakeStatus',
+          'contactEmail',
+          'alumniNotes',
+          'authorUid',
+          'authorName',
+          'authorVerified',
+          'isPublished',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'companyName',
+          'dosLicense',
+          'fleetType',
+          'cadetIntakeStatus',
+          'contactEmail',
+          'alumniNotes',
+          'authorUid',
+          'authorName',
+          'authorVerified',
+          'isPublished',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.companyName is string && data.companyName.size() >= 2 && data.companyName.size() <= 120 &&
+        data.dosLicense is string && data.dosLicense.size() <= 40 &&
+        data.fleetType is string && data.fleetType.size() >= 2 && data.fleetType.size() <= 120 &&
+        data.cadetIntakeStatus is string && data.cadetIntakeStatus in ['Accepting Cadets', 'Officers Only', 'Seasonal Intake', 'Paused'] &&
+        data.contactEmail is string && data.contactEmail.size() <= 160 &&
+        data.alumniNotes is string && data.alumniNotes.size() <= 1000 &&
+        isValidId(data.authorUid) &&
+        data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 100 &&
+        data.authorVerified is bool &&
+        data.isPublished is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidDhakaRoadmapItem(data) {
+      return data.keys().hasAll([
+          'itemType',
+          'title',
+          'subtitle',
+          'personName',
+          'personBatch',
+          'personCadetNo',
+          'status',
+          'targetAmountBdt',
+          'raisedAmountBdt',
+          'displayOrder',
+          'notes',
+          'isPublished',
+          'updatedByUid',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'itemType',
+          'title',
+          'subtitle',
+          'personName',
+          'personBatch',
+          'personCadetNo',
+          'status',
+          'targetAmountBdt',
+          'raisedAmountBdt',
+          'displayOrder',
+          'notes',
+          'isPublished',
+          'updatedByUid',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.itemType is string && data.itemType in ['committee', 'milestone'] &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 120 &&
+        data.subtitle is string && data.subtitle.size() <= 140 &&
+        data.personName is string && data.personName.size() <= 100 &&
+        data.personBatch is string && data.personBatch.size() <= 32 &&
+        data.personCadetNo is string && data.personCadetNo.size() <= 24 &&
+        data.status is string && data.status in ['Active', 'Planned', 'In Progress', 'Completed'] &&
+        data.targetAmountBdt is number && data.targetAmountBdt >= 0 && data.targetAmountBdt <= 1000000000 &&
+        data.raisedAmountBdt is number && data.raisedAmountBdt >= 0 && data.raisedAmountBdt <= 1000000000 &&
+        data.displayOrder is int && data.displayOrder >= 0 && data.displayOrder <= 9999 &&
+        data.notes is string && data.notes.size() <= 500 &&
+        data.isPublished is bool &&
+        isValidId(data.updatedByUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCopCertificate(data, memberId) {
+      return data.keys().hasAll([
+          'memberId',
+          'title',
+          'certNumber',
+          'expiryDate',
+          'isStandard',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'memberId',
+          'title',
+          'certNumber',
+          'issueDate',
+          'expiryDate',
+          'isStandard',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.memberId) &&
+        data.memberId == memberId &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 120 &&
+        data.certNumber is string && data.certNumber.size() <= 48 &&
+        (!('issueDate' in data) || isOptionalIsoDate(data.issueDate)) &&
+        isOptionalIsoDate(data.expiryDate) &&
+        data.isStandard is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPaymentSubmission(data) {
+      return data.keys().hasAll([
+          'memberUid',
+          'memberName',
+          'memberCadetNumber',
+          'memberBatch',
+          'amount',
+          'currency',
+          'category',
+          'paymentMethod',
+          'bankAccountLabel',
+          'referenceNumber',
+          'transactionDateTime',
+          'notes',
+          'receiptDataUrl',
+          'status',
+          'adminNotes',
+          'reviewedByUid',
+          'reviewedByName',
+          'postedTransactionId',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'memberUid',
+          'memberName',
+          'memberCadetNumber',
+          'memberBatch',
+          'amount',
+          'currency',
+          'category',
+          'paymentMethod',
+          'bankAccountLabel',
+          'referenceNumber',
+          'transactionDateTime',
+          'notes',
+          'receiptDataUrl',
+          'status',
+          'adminNotes',
+          'reviewedByUid',
+          'reviewedByName',
+          'postedTransactionId',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.memberUid) &&
+        data.memberName is string && data.memberName.size() >= 2 && data.memberName.size() <= 100 &&
+        data.memberCadetNumber is string && data.memberCadetNumber.size() >= 1 && data.memberCadetNumber.size() <= 24 &&
+        data.memberBatch is string && data.memberBatch.size() >= 1 && data.memberBatch.size() <= 32 &&
+        data.amount is number && data.amount > 0 && data.amount <= 100000000 &&
+        data.currency is string && data.currency == 'BDT' &&
+        isValidFundCategory(data.category) && data.category != 'Operational Expense' &&
+        isValidPaymentMethod(data.paymentMethod) &&
+        data.bankAccountLabel is string && data.bankAccountLabel.size() <= 120 &&
+        data.referenceNumber is string && data.referenceNumber.size() >= 2 && data.referenceNumber.size() <= 80 &&
+        data.transactionDateTime is string && data.transactionDateTime.size() >= 10 && data.transactionDateTime.size() <= 32 &&
+        data.notes is string && data.notes.size() <= 500 &&
+        data.receiptDataUrl is string && data.receiptDataUrl.size() >= 10 && data.receiptDataUrl.size() <= 150000 &&
+        data.status is string && data.status in ['pending', 'approved', 'rejected'] &&
+        data.adminNotes is string && data.adminNotes.size() <= 500 &&
+        data.reviewedByUid is string && data.reviewedByUid.size() <= 128 &&
+        data.reviewedByName is string && data.reviewedByName.size() <= 100 &&
+        data.postedTransactionId is string && data.postedTransactionId.size() <= 128 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidGalleryPhoto(data) {
+      return data.keys().hasAll([
+          'batch',
+          'title',
+          'description',
+          'photoUrl',
+          'isPublished',
+          'uploadedByUid',
+          'uploadedByName',
+          'uploadedAt',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'batch',
+          'title',
+          'description',
+          'photoUrl',
+          'isPublished',
+          'uploadedByUid',
+          'uploadedByName',
+          'uploadedAt',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.batch is string && data.batch.size() >= 2 && data.batch.size() <= 32 &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 140 &&
+        data.description is string && data.description.size() <= 500 &&
+        data.photoUrl is string && data.photoUrl.size() >= 5 && data.photoUrl.size() <= 150000 &&
+        data.isPublished is bool &&
+        isValidId(data.uploadedByUid) &&
+        data.uploadedByName is string && data.uploadedByName.size() >= 2 && data.uploadedByName.size() <= 100 &&
+        data.uploadedAt is string && data.uploadedAt.size() >= 10 && data.uploadedAt.size() <= 40 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // -------------------------------------------------------------------------
+    // Canonical Collection: /public_profiles/{memberId} (Non-PII Directory & ID Card)
+    // -------------------------------------------------------------------------
+    match /public_profiles/{memberId} {
+      allow get: if isValidId(memberId) && (
+        (isSignedIn() && existing().isPublicDirectory == true) ||
+        isOwner(memberId) ||
+        isAdmin()
+      );
+
+      allow list: if isSignedIn() && existing().isPublicDirectory == true;
+
+      allow create: if isValidId(memberId) &&
+        isVerifiedUser() &&
+        isValidPublicProfile(incoming()) &&
+        incoming().uid == memberId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          (isOwner(memberId) && incoming().isVerified == false) ||
+          isAdmin()
+        );
+
+      allow update: if isValidId(memberId) &&
+        isVerifiedUser() &&
+        isValidPublicProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            isOwner(memberId) &&
+            incoming().isVerified == existing().isVerified &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'fullName',
+              'photoUrl',
+              'cadetNumber',
+              'batch',
+              'department',
+              'cdcNumber',
+              'sidNumber',
+              'currentRank',
+              'availabilityStatus',
+              'bloodGroup',
+              'city',
+              'country',
+              'cvUrl',
+              'memberSerial',
+              'isPublicDirectory',
+              'voyageCount',
+              'contactEmail',
+              'contactPhone',
+              'additionalInfo',
+              'updatedAt'
+            ])
+          ) ||
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'isVerified',
+              'fullName',
+              'photoUrl',
+              'cadetNumber',
+              'batch',
+              'department',
+              'cdcNumber',
+              'sidNumber',
+              'currentRank',
+              'availabilityStatus',
+              'bloodGroup',
+              'city',
+              'country',
+              'cvUrl',
+              'memberSerial',
+              'isPublicDirectory',
+              'voyageCount',
+              'contactEmail',
+              'contactPhone',
+              'additionalInfo',
+              'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isValidId(memberId) && isVerifiedUser() && (isOwner(memberId) || isAdmin());
+
+      match /voyages/{voyageId} {
+        allow get: if isValidId(memberId) && isValidId(voyageId) && isSignedIn() && (
+          isOwner(memberId) || isAdmin()
+        ) && exists(/databases/$(database)/documents/public_profiles/$(memberId));
+
+        allow list: if isSignedIn() && (
+          isOwner(memberId) || existing().memberId == request.auth.uid || isMainAdmin()
+        );
+
+        allow create: if isValidId(memberId) &&
+          isValidId(voyageId) &&
+          isVerifiedUser() &&
+          isValidVoyageRecord(incoming(), memberId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          (isOwner(memberId) || isAdmin()) &&
+          exists(/databases/$(database)/documents/public_profiles/$(memberId));
+
+        allow update: if isValidId(memberId) &&
+          isValidId(voyageId) &&
+          isVerifiedUser() &&
+          isValidVoyageRecord(incoming(), memberId) &&
+          incoming().memberId == existing().memberId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            (
+              isOwner(memberId) &&
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'vesselName',
+                'vesselType',
+                'companyName',
+                'rankServed',
+                'signOnDate',
+                'signOffDate',
+                'isVisible',
+                'updatedAt'
+              ])
+            ) ||
+            (
+              isAdmin() &&
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'vesselName',
+                'vesselType',
+                'companyName',
+                'rankServed',
+                'signOnDate',
+                'signOffDate',
+                'isVisible',
+                'updatedAt'
+              ])
+            )
+          ) &&
+          exists(/databases/$(database)/documents/public_profiles/$(memberId));
+
+        allow delete: if isValidId(memberId) &&
+          isValidId(voyageId) &&
+          isVerifiedUser() &&
+          (isOwner(memberId) || isAdmin()) &&
+          exists(/databases/$(database)/documents/public_profiles/$(memberId));
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Canonical Collection: /private_vault/{memberId} (Strict Confidential PII Vault)
+    // -------------------------------------------------------------------------
+    match /private_vault/{memberId} {
+      allow get: if isValidId(memberId) && (isOwner(memberId) || isAdmin());
+      allow list: if false;
+
+      allow create: if isValidId(memberId) &&
+        isVerifiedUser() &&
+        isValidPrivateVault(incoming()) &&
+        incoming().uid == memberId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isOwner(memberId) || isAdmin());
+
+      allow update: if isValidId(memberId) &&
+        isVerifiedUser() &&
+        isValidPrivateVault(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            isOwner(memberId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'email',
+              'phone',
+              'whatsapp',
+              'academyName',
+              'passportNumber',
+              'passportIssueDate',
+              'bankAccountHolder',
+              'bankName',
+              'bankBranch',
+              'bankAccountNumber',
+              'bankRoutingNumber',
+              'mfsNumber',
+              'passportExpiry',
+              'cdcIssueDate',
+              'cdcExpiry',
+              'medicalExpiry',
+              'stcwCocExpiry',
+              'academicQualifications',
+              'nokName',
+              'nokRelation',
+              'nokPhone',
+              'nokCity',
+              'updatedAt'
+            ])
+          ) ||
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'email',
+              'phone',
+              'whatsapp',
+              'academyName',
+              'passportNumber',
+              'passportIssueDate',
+              'bankAccountHolder',
+              'bankName',
+              'bankBranch',
+              'bankAccountNumber',
+              'bankRoutingNumber',
+              'mfsNumber',
+              'passportExpiry',
+              'cdcIssueDate',
+              'cdcExpiry',
+              'medicalExpiry',
+              'stcwCocExpiry',
+              'academicQualifications',
+              'nokName',
+              'nokRelation',
+              'nokPhone',
+              'nokCity',
+              'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isValidId(memberId) && isVerifiedUser() && (isOwner(memberId) || isAdmin());
+
+      match /cop_certificates/{certId} {
+        allow get: if isValidId(memberId) && isValidId(certId) && (isOwner(memberId) || isAdmin());
+        allow list: if isValidId(memberId) && isOwner(memberId);
+
+        allow create: if isValidId(memberId) &&
+          isValidId(certId) &&
+          isVerifiedUser() &&
+          isValidCopCertificate(incoming(), memberId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          (isOwner(memberId) || isAdmin()) &&
+          exists(/databases/$(database)/documents/private_vault/$(memberId));
+
+        allow update: if isValidId(memberId) &&
+          isValidId(certId) &&
+          isVerifiedUser() &&
+          isValidCopCertificate(incoming(), memberId) &&
+          incoming().memberId == existing().memberId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (isOwner(memberId) || isAdmin()) &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title',
+            'certNumber',
+            'issueDate',
+            'expiryDate',
+            'isStandard',
+            'updatedAt'
+          ]) &&
+          exists(/databases/$(database)/documents/private_vault/$(memberId));
+
+        allow delete: if isValidId(memberId) &&
+          isValidId(certId) &&
+          isVerifiedUser() &&
+          (isOwner(memberId) || isAdmin()) &&
+          exists(/databases/$(database)/documents/private_vault/$(memberId));
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Legacy Collection: /directory_profiles/{memberId} (Retained for Migration)
+    // -------------------------------------------------------------------------
+    match /directory_profiles/{memberId} {
+      allow get: if isValidId(memberId) && (
+        (isSignedIn() && existing().isPublicDirectory == true) ||
+        isOwner(memberId) ||
+        isAdmin()
+      );
+
+      allow list: if isSignedIn() && existing().isPublicDirectory == true;
+
+      allow create: if isValidId(memberId) &&
+        isVerifiedUser() &&
+        isValidDirectoryProfile(incoming()) &&
+        incoming().uid == memberId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          (isOwner(memberId) && incoming().isVerified == false) ||
+          isAdmin()
+        );
+
+      allow update: if isValidId(memberId) &&
+        isVerifiedUser() &&
+        isValidDirectoryProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            isOwner(memberId) &&
+            incoming().isVerified == existing().isVerified &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'fullName',
+              'photoUrl',
+              'cadetNumber',
+              'batch',
+              'department',
+              'cdcNumber',
+              'sidNumber',
+              'currentRank',
+              'availabilityStatus',
+              'cvUrl',
+              'memberSerial',
+              'isPublicDirectory',
+              'voyageCount',
+              'updatedAt'
+            ])
+          ) ||
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'isVerified',
+              'fullName',
+              'photoUrl',
+              'cadetNumber',
+              'batch',
+              'department',
+              'cdcNumber',
+              'sidNumber',
+              'currentRank',
+              'availabilityStatus',
+              'cvUrl',
+              'memberSerial',
+              'isPublicDirectory',
+              'voyageCount',
+              'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isValidId(memberId) && isVerifiedUser() && (isOwner(memberId) || isAdmin());
+
+      match /voyages/{voyageId} {
+        allow get: if isValidId(memberId) && isValidId(voyageId) && isSignedIn() && (
+          isOwner(memberId) || isAdmin()
+        ) && exists(/databases/$(database)/documents/directory_profiles/$(memberId));
+
+        allow list: if isSignedIn() && (
+          isOwner(memberId) || existing().memberId == request.auth.uid || isMainAdmin()
+        );
+
+        allow create: if isValidId(memberId) &&
+          isValidId(voyageId) &&
+          isVerifiedUser() &&
+          isValidVoyageRecord(incoming(), memberId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          (isOwner(memberId) || isAdmin()) &&
+          exists(/databases/$(database)/documents/directory_profiles/$(memberId));
+
+        allow update: if isValidId(memberId) &&
+          isValidId(voyageId) &&
+          isVerifiedUser() &&
+          isValidVoyageRecord(incoming(), memberId) &&
+          incoming().memberId == existing().memberId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            (
+              isOwner(memberId) &&
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'vesselName',
+                'vesselType',
+                'companyName',
+                'rankServed',
+                'signOnDate',
+                'signOffDate',
+                'isVisible',
+                'updatedAt'
+              ])
+            ) ||
+            (
+              isAdmin() &&
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'vesselName',
+                'vesselType',
+                'companyName',
+                'rankServed',
+                'signOnDate',
+                'signOffDate',
+                'isVisible',
+                'updatedAt'
+              ])
+            )
+          ) &&
+          exists(/databases/$(database)/documents/directory_profiles/$(memberId));
+
+        allow delete: if isValidId(memberId) &&
+          isValidId(voyageId) &&
+          isVerifiedUser() &&
+          (isOwner(memberId) || isAdmin()) &&
+          exists(/databases/$(database)/documents/directory_profiles/$(memberId));
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Legacy Collection: /member_private/{memberId} (Retained for Migration)
+    // -------------------------------------------------------------------------
+    match /member_private/{memberId} {
+      allow get: if isValidId(memberId) && (isOwner(memberId) || isAdmin());
+      allow list: if false;
+
+      allow create: if isValidId(memberId) &&
+        isVerifiedUser() &&
+        isValidPrivateContact(incoming()) &&
+        incoming().uid == memberId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (isOwner(memberId) || isAdmin());
+
+      allow update: if isValidId(memberId) &&
+        isVerifiedUser() &&
+        isValidPrivateContact(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            isOwner(memberId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'email',
+              'phone',
+              'whatsapp',
+              'updatedAt'
+            ])
+          ) ||
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'email',
+              'phone',
+              'whatsapp',
+              'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isValidId(memberId) && isVerifiedUser() && (isOwner(memberId) || isAdmin());
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /job_postings/{jobId} (Admin-Only Writes; Member Read-Only)
+    // -------------------------------------------------------------------------
+    match /job_postings/{jobId} {
+      allow get: if isValidId(jobId) && isSignedIn() && (
+        existing().status == 'open' || isAdmin()
+      );
+
+      allow list: if isSignedIn() && existing().status == 'open';
+
+      allow create: if isValidId(jobId) &&
+        isVerifiedUser() &&
+        isValidJobPosting(incoming()) &&
+        incoming().posterUid == request.auth.uid &&
+        incoming().status == 'open' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isValidId(jobId) &&
+        isVerifiedUser() &&
+        isValidJobPosting(incoming()) &&
+        incoming().posterUid == existing().posterUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'companyName',
+              'rankNeeded',
+              'vesselType',
+              'contactInfo',
+              'notes',
+              'updatedAt'
+            ])
+          ) ||
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isValidId(jobId) && isVerifiedUser() && isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /portal_stats/{statId} (Public Aggregate Counters Only)
+    // -------------------------------------------------------------------------
+    match /portal_stats/{statId} {
+      allow get: if isValidId(statId) && statId == 'summary';
+      allow list: if false;
+      allow create, update: if isValidId(statId) &&
+        statId == 'summary' &&
+        isValidPortalStats(incoming()) &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /admins/{adminId} (Exclusively Managed by Main Admin)
+    // -------------------------------------------------------------------------
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (
+        isMainAdmin() ||
+        isOwner(adminId) ||
+        (
+          isVerifiedUser() &&
+          request.auth.token.email is string &&
+          adminId == emailToAdminDocId(request.auth.token.email)
+        )
+      );
+
+      allow list: if isMainAdmin() && existing().role == 'admin';
+
+      allow create: if isValidId(adminId) &&
+        isMainAdmin() &&
+        isValidAdminEntry(incoming()) &&
+        adminId == emailToAdminDocId(incoming().email) &&
+        incoming().addedByEmail == 'razibuddin247@gmail.com' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isValidId(adminId) &&
+        isMainAdmin() &&
+        isValidAdminEntry(incoming()) &&
+        incoming().email == existing().email &&
+        incoming().addedByEmail == existing().addedByEmail &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt']);
+
+      allow delete: if isValidId(adminId) && isMainAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /bank_accounts/{accountId} (Official BMASA Bank Details)
+    // -------------------------------------------------------------------------
+    match /bank_accounts/{accountId} {
+      allow get: if isValidId(accountId) && isSignedIn() && (
+        existing().isActive == true || isAdmin()
+      );
+
+      allow list: if isSignedIn() && existing().isActive == true;
+
+      allow create: if isValidId(accountId) &&
+        isVerifiedUser() &&
+        isValidBankAccount(incoming()) &&
+        incoming().addedByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isValidId(accountId) &&
+        isVerifiedUser() &&
+        isValidBankAccount(incoming()) &&
+        incoming().addedByUid == existing().addedByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'bankName',
+          'accountName',
+          'accountNumber',
+          'branchName',
+          'routingNumber',
+          'accountType',
+          'currency',
+          'notes',
+          'isActive',
+          'updatedAt'
+        ]);
+
+      allow delete: if isValidId(accountId) && isVerifiedUser() && isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /fund_transactions/{transactionId} (Payments & Receipted Expenses)
+    // -------------------------------------------------------------------------
+    match /fund_transactions/{transactionId} {
+      allow get: if isValidId(transactionId) && isSignedIn() && (
+        existing().isPublished == true || isAdmin()
+      );
+
+      allow list: if isSignedIn() && existing().isPublished == true;
+
+      allow create: if isValidId(transactionId) &&
+        isVerifiedUser() &&
+        isValidFundTransaction(incoming()) &&
+        incoming().recordedByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        (
+          incoming().memberUid == '' ||
+          memberProfileExists(incoming().memberUid)
+        );
+
+      allow update: if isValidId(transactionId) &&
+        isVerifiedUser() &&
+        isValidFundTransaction(incoming()) &&
+        incoming().recordedByUid == existing().recordedByUid &&
+        (!('updatedByUid' in incoming()) || incoming().updatedByUid == request.auth.uid) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'memberUid',
+          'memberName',
+          'memberCadetNumber',
+          'memberBatch',
+          'entryType',
+          'amount',
+          'currency',
+          'category',
+          'paymentMethod',
+          'bankAccountLabel',
+          'referenceNumber',
+          'transactionDateTime',
+          'notes',
+          'receiptDataUrl',
+          'isPublished',
+          'updatedByUid',
+          'updatedByName',
+          'updatedByEmail',
+          'updatedAt'
+        ]) &&
+        (
+          incoming().memberUid == '' ||
+          memberProfileExists(incoming().memberUid)
+        );
+
+      allow delete: if isValidId(transactionId) && isVerifiedUser() && isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /payment_submissions/{submissionId} (Member Payment Proofs)
+    // -------------------------------------------------------------------------
+    match /payment_submissions/{submissionId} {
+      allow get: if isValidId(submissionId) && isSignedIn() && (
+        existing().memberUid == request.auth.uid || isAdmin()
+      );
+
+      allow list: if isSignedIn() && (
+        existing().memberUid == request.auth.uid || isMainAdmin()
+      );
+
+      allow create: if isValidId(submissionId) &&
+        isVerifiedUser() &&
+        isValidPaymentSubmission(incoming()) &&
+        incoming().memberUid == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().adminNotes == '' &&
+        incoming().reviewedByUid == '' &&
+        incoming().reviewedByName == '' &&
+        incoming().postedTransactionId == '' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        memberProfileExists(request.auth.uid);
+
+      allow update: if isValidId(submissionId) &&
+        isVerifiedUser() &&
+        isAdmin() &&
+        isValidPaymentSubmission(incoming()) &&
+        incoming().memberUid == existing().memberUid &&
+        incoming().memberName == existing().memberName &&
+        incoming().memberCadetNumber == existing().memberCadetNumber &&
+        incoming().memberBatch == existing().memberBatch &&
+        incoming().amount == existing().amount &&
+        incoming().currency == existing().currency &&
+        incoming().category == existing().category &&
+        incoming().paymentMethod == existing().paymentMethod &&
+        incoming().bankAccountLabel == existing().bankAccountLabel &&
+        incoming().referenceNumber == existing().referenceNumber &&
+        incoming().transactionDateTime == existing().transactionDateTime &&
+        incoming().notes == existing().notes &&
+        incoming().receiptDataUrl == existing().receiptDataUrl &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'status',
+          'adminNotes',
+          'reviewedByUid',
+          'reviewedByName',
+          'postedTransactionId',
+          'updatedAt'
+        ]);
+
+      allow delete: if isValidId(submissionId) && isVerifiedUser() && isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /notices/{noticeId} (Official BMASA Circulars - Admin Managed)
+    // -------------------------------------------------------------------------
+    match /notices/{noticeId} {
+      allow get: if isValidId(noticeId) && isSignedIn() && (
+        existing().isPublished == true || isAdmin()
+      );
+
+      allow list: if isSignedIn() && existing().isPublished == true;
+
+      allow create: if isValidId(noticeId) &&
+        isVerifiedUser() &&
+        isValidNoticeItem(incoming()) &&
+        incoming().authorUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isValidId(noticeId) &&
+        isVerifiedUser() &&
+        isValidNoticeItem(incoming()) &&
+        incoming().authorUid == existing().authorUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title',
+          'noticeType',
+          'category',
+          'body',
+          'attachmentUrl',
+          'isPinned',
+          'isPublished',
+          'updatedAt'
+        ]);
+
+      allow delete: if isValidId(noticeId) && isVerifiedUser() && isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /mentorship_posts/{postId} (CoC Exam & Mentorship Hub)
+    // -------------------------------------------------------------------------
+    match /mentorship_posts/{postId} {
+      allow get: if isValidId(postId) && isSignedIn() && (
+        existing().isPublished == true || isOwner(existing().authorUid) || isAdmin()
+      );
+
+      allow list: if isSignedIn() && existing().isPublished == true;
+
+      allow create: if isValidId(postId) &&
+        isVerifiedUser() &&
+        isVerifiedMember() &&
+        isValidMentorshipPost(incoming()) &&
+        incoming().authorUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isValidId(postId) &&
+        isVerifiedUser() &&
+        isValidMentorshipPost(incoming()) &&
+        incoming().authorUid == existing().authorUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (isOwner(existing().authorUid) || isAdmin()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'examTrack',
+          'title',
+          'adviceBody',
+          'resourceUrl',
+          'isPublished',
+          'updatedAt'
+        ]);
+
+      allow delete: if isValidId(postId) && isVerifiedUser() && (isOwner(existing().authorUid) || isAdmin());
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /crewing_companies/{companyId} (Verified Shipping & Manning Directory)
+    // -------------------------------------------------------------------------
+    match /crewing_companies/{companyId} {
+      allow get: if isValidId(companyId) && isSignedIn() && (
+        existing().isPublished == true || isOwner(existing().authorUid) || isAdmin()
+      );
+
+      allow list: if isSignedIn() && existing().isPublished == true;
+
+      allow create: if isValidId(companyId) &&
+        isVerifiedUser() &&
+        isVerifiedMember() &&
+        isValidCrewingCompany(incoming()) &&
+        incoming().authorUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isValidId(companyId) &&
+        isVerifiedUser() &&
+        isValidCrewingCompany(incoming()) &&
+        incoming().authorUid == existing().authorUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (isOwner(existing().authorUid) || isAdmin()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'companyName',
+          'dosLicense',
+          'fleetType',
+          'cadetIntakeStatus',
+          'contactEmail',
+          'alumniNotes',
+          'isPublished',
+          'updatedAt'
+        ]);
+
+      allow delete: if isValidId(companyId) && isVerifiedUser() && (isOwner(existing().authorUid) || isAdmin());
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /dhaka_office_milestones/{itemId} (Committee & Dhaka Office Roadmap)
+    // -------------------------------------------------------------------------
+    match /dhaka_office_milestones/{itemId} {
+      allow get: if isValidId(itemId) && isSignedIn() && (
+        existing().isPublished == true || isAdmin()
+      );
+
+      allow list: if isSignedIn() && existing().isPublished == true;
+
+      allow create: if isValidId(itemId) &&
+        isVerifiedUser() &&
+        isValidDhakaRoadmapItem(incoming()) &&
+        incoming().updatedByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isValidId(itemId) &&
+        isVerifiedUser() &&
+        isValidDhakaRoadmapItem(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'itemType',
+          'title',
+          'subtitle',
+          'personName',
+          'personBatch',
+          'personCadetNo',
+          'status',
+          'targetAmountBdt',
+          'raisedAmountBdt',
+          'displayOrder',
+          'notes',
+          'isPublished',
+          'updatedByUid',
+          'updatedAt'
+        ]);
+
+      allow delete: if isValidId(itemId) && isVerifiedUser() && isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection: /gallery_photos/{photoId} (BMASA Batch Photo Gallery)
+    // -------------------------------------------------------------------------
+    match /gallery_photos/{photoId} {
+      allow get: if isValidId(photoId) && isSignedIn() && (
+        existing().isPublished == true || isAdmin()
+      );
+
+      allow list: if isSignedIn() && existing().isPublished == true;
+
+      allow create: if isValidId(photoId) &&
+        isVerifiedUser() &&
+        isValidGalleryPhoto(incoming()) &&
+        incoming().uploadedByUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isValidId(photoId) &&
+        isVerifiedUser() &&
+        isValidGalleryPhoto(incoming()) &&
+        incoming().uploadedByUid == existing().uploadedByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'batch',
+          'title',
+          'description',
+          'photoUrl',
+          'isPublished',
+          'updatedAt'
+        ]);
+
+      allow delete: if isValidId(photoId) && isVerifiedUser() && isAdmin();
+    }
+  }
+}

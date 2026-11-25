@@ -1,0 +1,8 @@
+{
+  "name": "BMAS Alumni & Cadet Portal",
+  "description": "Official portal for the Bangladesh Marine Academy Sylhet Alumni Association (BMASA): digital credentials, directory, voyage log, placement board, CoC mentorship, and transparent fund ledger.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

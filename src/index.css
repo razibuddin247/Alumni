@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-navy-950: #061020;
+  --color-navy-900: #0A192F;
+  --color-navy-800: #112240;
+  --color-navy-700: #1D3458;
+  --color-gold-400: #D8B979;
+  --color-gold-500: #C5A059;
+  --color-gold-600: #9E7B39;
+  --color-gold-700: #806127;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: #F8FAFC;
+    color: #0F172A;
+    scroll-behavior: smooth;
+    overflow-x: clip;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Soft-3D Neumorphic Circular Auth Stage (inspired by tactile 3D flip disc) */
+.neu-perspective {
+  perspective: 1600px;
+}
+
+.neu-flip-card {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.neu-flip-card.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.neu-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: linear-gradient(145deg, #f3f6fa 0%, #e4e9f0 100%);
+  box-shadow:
+    -16px -16px 36px rgba(255, 255, 255, 0.94),
+    18px 18px 40px rgba(148, 163, 184, 0.42),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.92),
+    inset -2px -2px 6px rgba(148, 163, 184, 0.22);
+}
+
+.neu-face-back {
+  transform: rotateY(180deg);
+}
+
+.neu-inset {
+  background: #eaeff5;
+  box-shadow:
+    inset 4px 4px 8px rgba(148, 163, 184, 0.38),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.92);
+}
+
+.neu-raised {
+  background: linear-gradient(145deg, #f5f7fb 0%, #e5eaf1 100%);
+  box-shadow:
+    -5px -5px 12px rgba(255, 255, 255, 0.95),
+    5px 5px 12px rgba(148, 163, 184, 0.38);
+}
+
+@media (hover: hover) {
+  .neu-raised:hover:not(:disabled) {
+    box-shadow:
+      -6px -6px 14px rgba(255, 255, 255, 1),
+      6px 6px 14px rgba(148, 163, 184, 0.46);
+    transform: translateY(-1px);
+  }
+}
+
+.neu-raised:active:not(:disabled) {
+  box-shadow:
+    inset 3px 3px 7px rgba(148, 163, 184, 0.42),
+    inset -3px -3px 7px rgba(255, 255, 255, 0.92);
+  transform: translateY(0);
+}
+
+.neu-toggle-track {
+  background: #e6ebf2;
+  box-shadow:
+    inset 3px 3px 6px rgba(148, 163, 184, 0.42),
+    inset -3px -3px 6px rgba(255, 255, 255, 0.92);
+}
+
+/* Maritime Animated Ocean Wave Layers */
+@keyframes waveMotion {
+  0% {
+    transform: translateX(0) translateZ(0);
+  }
+  50% {
+    transform: translateX(-25%) translateZ(0);
+  }
+  100% {
+    transform: translateX(-50%) translateZ(0);
+  }
+}
+
+@keyframes waveMotionReverse {
+  0% {
+    transform: translateX(-50%) translateZ(0);
+  }
+  50% {
+    transform: translateX(-25%) translateZ(0);
+  }
+  100% {
+    transform: translateX(0) translateZ(0);
+  }
+}
+
+.animate-wave-slow {
+  animation: waveMotion 22s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+}
+
+.animate-wave-medium {
+  animation: waveMotionReverse 16s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+}
+
+.animate-wave-fast {
+  animation: waveMotion 11s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
